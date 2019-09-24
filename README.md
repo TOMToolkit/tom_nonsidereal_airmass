@@ -7,7 +7,10 @@ to the TOM Toolkit.
 
 Install the module into your TOM environment:
 
-    pip install tom-nonsidereal-airmass
+    cd ~/github (or wherever you keep your github repos)
+    git clone https://github.com/jfrostburke/tom_nonsidereal_airmass
+    cd tom_nonsidereal_airmass
+    python setup.py build -f && python setup.py install -f
 
 In your TOM's `settings.py`, add this to `INSTALLED_APPS`:
 
@@ -15,7 +18,7 @@ In your TOM's `settings.py`, add this to `INSTALLED_APPS`:
     'tom_nonsidereal_airmass',
 
 If you have already customized your `target_detail.html`
-template you can skip ahead.
+template you can skip ahead to "At the top of the file."
 
 `cd` into the `templates` directory in the main directory of
 your project. Make a directory called `tom_targets` and `cd` into it.
@@ -40,7 +43,9 @@ Then to actually display the plots, find the line that says
 
     {% elif target.type == 'NON_SIDEREAL' %}
 
-and delete the following statement about not being able to plot non-sidereal airmass.
+and delete the next line with the `<p>...</p>` about not being able to plot non-sidereal airmass.
 Change it to
 
     {% nonsidereal_target_plan %}
+
+And you're done!
