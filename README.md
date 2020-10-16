@@ -9,7 +9,8 @@ Install the module into your TOM environment:
 
     pip install tom-nonsidereal-airmass
 
-or from github by
+or from github by:
+
     git clone https://github.com/TOMToolkit/tom_nonsidereal_airmass.git
 
 In your TOM's `settings.py`, add this to `INSTALLED_APPS`:
