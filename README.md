@@ -58,8 +58,10 @@ Copy:
 
     {% load nonsidereal_airmass_extras %}
 
-into `target_list.html` below `{% load bootstrap4 targets_extras %}`. Then replace
-`{% target_distribution filter.qs %}` with:
+into `target_list.html` below `{% load bootstrap4 targets_extras %}`.
+
+
+Then replace `{% target_distribution filter.qs %}` with:
     {% target_distribution_nonsidereal filter.qs %}
 
 
