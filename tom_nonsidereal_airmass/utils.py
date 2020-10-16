@@ -151,6 +151,28 @@ def get_visibility(target, start_time, end_time, interval, airmass_limit=10):
     return visibility
 
 
+def get_arc(target):
+    """
+    Get the approximate arc for plotting purposes. Not accurate enough for telescope pointing.
+    """
+
+    body = get_pyephem_instance_for_type(target)
+    sun = ephem.Sun()
+    observer = ephem.Observer()
+    observer.lon = ephem.degrees(0.0)
+    observer.lat = ephem.degrees(0.0)
+    observer.elevation = -6371.0
+
+    current_mjd = Time.now().mjd
+    ra, dec = [], []
+    for i in range(0, 375, 10):
+        observer.date = current_mjd + i -15019.5
+        body.compute(observer)
+        ra.append(Angle(str(body.a_ra), unit=units.degree).value)
+        dec.append(Angle(str(body.a_dec), unit=units.degree).value)
+    return (ra, dec)
+
+
 def get_pyephem_instance_for_type(target):
     """
     Constructs a pyephem body corresponding to the proper object type
