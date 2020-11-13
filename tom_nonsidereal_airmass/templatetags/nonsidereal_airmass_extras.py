@@ -1,4 +1,5 @@
 from django import template
+from django.conf import settings
 from dateutil.parser import parse
 import plotly.graph_objs as go
 from plotly import offline
@@ -10,6 +11,10 @@ from tom_targets.models import Target
 import json
 import numpy as np
 
+USE_EPHEMERIS_SCHEME = getattr(settings, "USE_EPHEMERIS_SCHEME", None)
+if USE_EPHEMERIS_SCHEME:
+    from tom_ephemeris_airmass.utils import get_eph_scheme_data
+    
 register = template.Library()
 
 
@@ -26,7 +31,8 @@ def nonsidereal_target_plan(context):
         plan_form = NonsiderealTargetVisibilityForm({
             'start_time': request.GET.get('start_time'),
             'end_time': request.GET.get('end_time'),
-            'airmass': request.GET.get('airmass')
+            'airmass': request.GET.get('airmass'),
+            'target': context['object'] if 'object' in context else context['target']
         })
         if plan_form.is_valid():
             start_time = parse(request.GET['start_time'])
@@ -45,7 +51,7 @@ def nonsidereal_target_plan(context):
             )
     return {
         'form': plan_form,
-        'target': context['object'],
+        'target': context['object'] if 'object' in context else context['target'],
         'visibility_graph': visibility_graph
     }
 
@@ -59,8 +65,8 @@ def target_distribution_nonsidereal(targets):
     locations = targets.filter(type=Target.SIDEREAL).values_list('ra', 'dec', 'name')
     data = []
     for target in targets:
-        if target.type=='NON_SIDEREAL':
-            if target.scheme!='EPHEMERIS':
+        if target.type == Target.NON_SIDEREAL:
+            if target.scheme != Target.EPHEMERIS:
                 (ra, dec) = get_arc(target)
                 data.append(
                     dict(
@@ -71,28 +77,29 @@ def target_distribution_nonsidereal(targets):
                         mode='lines',
                         type='scattergeo'
                     ))
-            elif target.scheme=='EPHEMERIS':
-                eph_json = json.loads(target.eph_json)
-                site = list(eph_json.keys())[0]
-                eph_json_single = eph_json[site]
-                mjd, ra, dec = [], [] , []
-                print(mjd)
-                for i in range(0, len(eph_json_single)):
-                    mjd.append(eph_json_single[i]['t'])
-                    ra.append(eph_json_single[i]['R'])
-                    dec.append(eph_json_single[i]['D'])
-                mjd, ra, dec = np.array(mjd, dtype='float64'), np.array(ra, dtype='float64'), np.array(dec, dtype='float64')
-                step = max(1, int(10.0/(mjd[1]-mjd[0])))
-                l = len(ra[::step])
-                data.append(
-                    dict(
-                        lon=ra[::step] if l>1 else ra,
-                        lat=dec[::step] if l>1 else dec,
-                        text=target.name,
-                        hoverinfo='text',
-                        mode='lines',
-                        type='scattergeo'
-                    ))
+            elif USE_EPHEMERIS_SCHEME:
+                data = get_eph_scheme_data(target, data)
+                #eph_json = json.loads(target.eph_json)
+                #site = list(eph_json.keys())[0]
+                #eph_json_single = eph_json[site]
+                #mjd, ra, dec = [], [] , []
+                #
+                #for i in range(0, len(eph_json_single)):
+                #    mjd.append(eph_json_single[i]['t'])
+                #    ra.append(eph_json_single[i]['R'])
+                #    dec.append(eph_json_single[i]['D'])
+                #mjd, ra, dec = np.array(mjd, dtype='float64'), np.array(ra, dtype='float64'), np.array(dec, dtype='float64')
+                #step = max(1, int(10.0/(mjd[1]-mjd[0])))
+                #l = len(ra[::step])
+                #data.append(
+                #    dict(
+                #        lon=ra[::step] if l>1 else ra,
+                #        lat=dec[::step] if l>1 else dec,
+                #        text=target.name,
+                #        hoverinfo='text',
+                #        mode='lines',
+                #        type='scattergeo'
+                #    ))
     # still show the sidereal targets
     data.append(
         dict(
