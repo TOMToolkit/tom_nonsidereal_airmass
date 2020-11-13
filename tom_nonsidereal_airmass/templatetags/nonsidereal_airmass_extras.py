@@ -4,16 +4,28 @@ from dateutil.parser import parse
 import plotly.graph_objs as go
 from plotly import offline
 
-from tom_nonsidereal_airmass.utils import get_visibility, get_arc
+from tom_nonsidereal_airmass.utils import get_visibility
 from tom_nonsidereal_airmass.forms import NonsiderealTargetVisibilityForm
 from tom_targets.models import Target
 
-import json
-import numpy as np
+from importlib import import_module
+try:
+    PLOTTING_FUNCTIONS_FOR_SCHEME = settings.PLOTTING_FUNCTIONS_FOR_SCHEME
+except AttributeError:
+    PLOTTING_FUNCTIONS_FOR_SCHEME = {
+        'MPC_MINOR_PLANET': 'tom_nonsidereal_airmass.utils.get_arc',
+        'EPHEMERIS': 'tom_nonsidereal_airmass.utils.get_eph_scheme_arc',
+    }
 
-USE_EPHEMERIS_SCHEME = getattr(settings, "USE_EPHEMERIS_SCHEME", None)
-if USE_EPHEMERIS_SCHEME:
-    from tom_ephemeris_airmass.utils import get_eph_scheme_data
+PLOTTING_FUNCTIONS = {}
+for p in PLOTTING_FUNCTIONS_FOR_SCHEME:
+    module_name, function_name = PLOTTING_FUNCTIONS_FOR_SCHEME.get(p).rsplit('.', 1)
+    try:
+        mod = import_module(module_name)
+        func = getattr(mod, function_name)
+        PLOTTING_FUNCTIONS[p] = func
+    except:
+        pass
 
 register = template.Library()
 
@@ -66,19 +78,16 @@ def target_distribution_nonsidereal(targets):
     data = []
     for target in targets:
         if target.type == Target.NON_SIDEREAL:
-            if target.scheme != Target.EPHEMERIS:
-                (ra, dec) = get_arc(target)
-                data.append(
-                    dict(
-                        lon=ra,
-                        lat=dec,
-                        text=target.name,
-                        hoverinfo='text',
-                        mode='lines',
-                        type='scattergeo'
-                    ))
-            elif USE_EPHEMERIS_SCHEME:
-                data = get_eph_scheme_data(target, data)
+            (ra, dec) = PLOTTING_FUNCTIONS.get(target.scheme)(target)
+            data.append(
+                dict(
+                    lon=ra,
+                    lat=dec,
+                    text=target.name,
+                    hoverinfo='text',
+                    mode='lines',
+                    type='scattergeo'
+                ))
 
     # still show the sidereal targets
     data.append(
