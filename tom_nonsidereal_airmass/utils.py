@@ -100,10 +100,7 @@ def get_next_rise_set_pair(rise_sets, time):
         return None
     return rise_sets[next_rise_pos]
 
-### WF: need to duplicate this function but as get_eph_scheme_visibilty
-###     do as was done with get_eph_scheme_arc.
-###     Then modify nonsidereal_target_plan in templatetags/nonsidereal_airmass_extras
-###     to use the PLOTTING_FUNCTION style checks and imports
+
 def get_eph_scheme_visibility(target, start_time, end_time, interval, airmass_limit=10):
     """
     Calculates the airmass for an epehermis scheme target for each given
@@ -151,7 +148,7 @@ def get_eph_scheme_visibility(target, start_time, end_time, interval, airmass_li
 
                 min_time = Time(max(min_mjd, Time(str(start_time)).mjd), format='mjd')
                 max_time = Time(min(max_mjd, Time(str(end_time)).mjd), format='mjd')
-                print(min_time, max_time)
+
                 interval_days = float(interval)/(60.0*24.0)
                 interp_times = np.arange(min_time.mjd, max_time.mjd, interval_days)
                 interp_ra = np.interp(interp_times, mjds, ras)*d2r
@@ -166,7 +163,6 @@ def get_eph_scheme_visibility(target, start_time, end_time, interval, airmass_li
                     n = 0
                     while curr_interval <= end:
                         time = curr_interval
-                        #print(time)
                         last_rise_set = get_last_rise_set_pair(rise_sets, time)
                         sunup = time > last_rise_set[0] and time < last_rise_set[1] if last_rise_set else False
                         observer.date = curr_interval
@@ -183,8 +179,6 @@ def get_eph_scheme_visibility(target, start_time, end_time, interval, airmass_li
                         )
                         curr_interval += timedelta(minutes=interval)
                     visibility['({0}) {1}'.format(observing_facility, site)] = positions
-            else:
-                print('Missing', site_code)
     return visibility
 
 
