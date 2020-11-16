@@ -6,14 +6,14 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='tom-nonsidereal-airmass',
+    name='tom-ephemeris',
     version='0.1.0',
-    description='Tom Toolkit module to plot non-sidereal airmass',
+    description='Tom Toolkit module to observe moving objects with custom, user-provided ephemerides.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://tomtoolkit.github.io',
-    author='TOM Toolkit Project',
-    author_email='jburke@lco.global',
+    url='https://github.com/fraserw/tom_ephemeris',
+    author='Wes Fraser',
+    author_email='westhefras@gmail.com',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',
@@ -24,10 +24,11 @@ setup(
         'Topic :: Scientific/Engineering :: Astronomy',
         'Topic :: Scientific/Engineering :: Physics'
     ],
-    keywords=['tomtoolkit', 'astronomy', 'astrophysics', 'cosmology', 'science', 'fits', 'observatory'],
+    keywords=['tomtoolkit', 'astronomy', 'planetary-science', 'moving-object-data-analysis', 'observatory'],
     packages=find_packages(),
     install_requires=[
         'tomtoolkit',
+        'tom_nonsidereal_airmass',
         'pyephem'
     ],
     include_package_data=True,
