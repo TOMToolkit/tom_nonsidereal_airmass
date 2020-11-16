@@ -1,6 +1,7 @@
 from django import template
 from django.conf import settings
 from dateutil.parser import parse
+from datetime import datetime, timedelta
 import plotly.graph_objs as go
 from plotly import offline
 
@@ -13,17 +14,23 @@ try:
     PLOTTING_FUNCTIONS_FOR_SCHEME = settings.PLOTTING_FUNCTIONS_FOR_SCHEME
 except AttributeError:
     PLOTTING_FUNCTIONS_FOR_SCHEME = {
-        'MPC_MINOR_PLANET': 'tom_nonsidereal_airmass.utils.get_arc',
-        'EPHEMERIS': 'tom_nonsidereal_airmass.utils.get_eph_scheme_arc',
+        'MPC_MINOR_PLANET': ['tom_nonsidereal_airmass.utils.get_arc',
+                             'tom_nonsidereal_airmass.utils.get_visibility'],
+        'EPHEMERIS': ['tom_nonsidereal_airmass.utils.get_eph_scheme_arc',
+                      'tom_nonsidereal_airmass.utils.get_eph_scheme_visibility'],
     }
 
-PLOTTING_FUNCTIONS = {}
+ARC_FUNCTIONS = {}
+VIS_FUNCTIONS = {}
 for p in PLOTTING_FUNCTIONS_FOR_SCHEME:
-    module_name, function_name = PLOTTING_FUNCTIONS_FOR_SCHEME.get(p).rsplit('.', 1)
+    module_name, function_name_arc = PLOTTING_FUNCTIONS_FOR_SCHEME.get(p)[0].rsplit('.', 1)
+    function_name_vis = PLOTTING_FUNCTIONS_FOR_SCHEME.get(p)[1].rsplit('.', 1)[1]
     try:
         mod = import_module(module_name)
-        func = getattr(mod, function_name)
-        PLOTTING_FUNCTIONS[p] = func
+        arc_func = getattr(mod, function_name_arc)
+        ARC_FUNCTIONS[p] = arc_func
+        vis_func = getattr(mod, function_name_vis)
+        VIS_FUNCTIONS[p] = vis_func
     except:
         pass
 
@@ -53,7 +60,7 @@ def nonsidereal_target_plan(context):
                 airmass_limit = float(request.GET.get('airmass'))
             else:
                 airmass_limit = None
-            visibility_data = get_visibility(context['object'], start_time, end_time, 10, airmass_limit)
+            visibility_data = VIS_FUNCTIONS.get(context['object'].scheme)(context['object'], start_time, end_time, 10, airmass_limit)
             plot_data = [
                 go.Scatter(x=data[0], y=data[1], mode='lines', name=site) for site, data in visibility_data.items()
             ]
@@ -78,7 +85,7 @@ def target_distribution_nonsidereal(targets):
     data = []
     for target in targets:
         if target.type == Target.NON_SIDEREAL:
-            (ra, dec) = PLOTTING_FUNCTIONS.get(target.scheme)(target)
+            (ra, dec) = ARC_FUNCTIONS.get(target.scheme)(target)
             data.append(
                 dict(
                     lon=ra,
@@ -131,3 +138,28 @@ def target_distribution_nonsidereal(targets):
     }
     figure = offline.plot(go.Figure(data=data, layout=layout), output_type='div', show_link=False)
     return {'figure': figure}
+
+
+@register.inclusion_tag('tom_observations/partials/observation_plan_nonsidereal.html')
+def observation_plan_nonsidereal(target, facility, length=7, interval=60, airmass_limit=None):
+    """
+    Displays form and renders plot for visibility calculation. Using this templatetag to render a plot requires that
+    the context of the parent view have values for start_time, end_time, and airmass.
+    """
+
+    visibility_graph = ''
+    start_time = datetime.now()
+    end_time = start_time + timedelta(days=length)
+
+    visibility_data = VIS_FUNCTIONS.get(target.scheme)(target, start_time, end_time, interval, airmass_limit)
+    plot_data = [
+        go.Scatter(x=data[0], y=data[1], mode='lines', name=site) for site, data in visibility_data.items()
+    ]
+    layout = go.Layout(yaxis=dict(autorange='reversed'))
+    visibility_graph = offline.plot(
+        go.Figure(data=plot_data, layout=layout), output_type='div', show_link=False
+    )
+
+    return {
+        'visibility_graph': visibility_graph
+    }
